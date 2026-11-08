@@ -55,7 +55,8 @@ export const api = {
   getSession: (id) => request('GET', `/sessions/${id}`),
   updateSession: (id, patch) => request('PATCH', `/sessions/${id}`, patch),
   deleteSession: (id) => request('DELETE', `/sessions/${id}`),
-  generate: (id, message, purpose) => request('POST', `/sessions/${id}/generate`, { message, purpose }),
+  generate: (id, message, purpose, mode) =>
+    request('POST', `/sessions/${id}/generate`, { message, purpose, mode }),
   chooseReply: (id, roundIndex, replyIndex) =>
     request('PUT', `/sessions/${id}/choose`, { roundIndex, replyIndex }),
   deleteRound: (id, roundIndex) => request('DELETE', `/sessions/${id}/round/${roundIndex}`),

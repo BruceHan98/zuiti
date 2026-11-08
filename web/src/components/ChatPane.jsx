@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { REPLY_STYLES, ROLES } from '../constants.js';
+import { MODES, REPLY_STYLES, ROLES } from '../constants.js';
 import { IconChat, IconCheck, IconCopy, IconEdit, IconSparkles, IconTrash } from './Icons.jsx';
 
 function ReplyCard({ reply, index, chosen, copied, onCopy }) {
@@ -36,6 +36,7 @@ export default function ChatPane({
   copiedKey,
 }) {
   const [message, setMessage] = useState('');
+  const [mode, setMode] = useState('reply');
   const [purpose, setPurpose] = useState(session ? ROLES[session.role].purposes[0] : '');
   const bottomRef = useRef(null);
 
@@ -66,7 +67,7 @@ export default function ChatPane({
     const msg = message.trim();
     if (!msg || generating) return;
     // 失败时保留输入内容，仅在成功后清空
-    Promise.resolve(onGenerate(msg, purpose)).then((ok) => {
+    Promise.resolve(onGenerate(msg, purpose, mode)).then((ok) => {
       if (ok !== false) setMessage('');
     });
   }
@@ -86,6 +87,7 @@ export default function ChatPane({
     const ok = await onDeleteRound(ri, { silent: true });
     if (ok === false) return;
     setMessage(round.text);
+    if (round.mode) setMode(round.mode);
     if (round.purpose) setPurpose(round.purpose);
     onNotify?.('已回填到输入框，修改后可重新生成');
   }
@@ -110,7 +112,11 @@ export default function ChatPane({
           {rounds.map((round, ri) => (
             <div className="round" key={ri}>
               <div className="round-head">
-                <span className="round-purpose">{round.purpose || '回复'}</span>
+                {round.mode === 'compose' ? (
+                  <span className="round-purpose mode-compose">我的想法</span>
+                ) : (
+                  <span className="round-purpose">{round.purpose || '回复'}</span>
+                )}
                 <span className="round-time">
                   {new Date(round.ts).toLocaleString('zh-CN', {
                     month: 'numeric',
@@ -128,7 +134,9 @@ export default function ChatPane({
                   </button>
                 </span>
               </div>
-              <div className="bubble-in">{round.text}</div>
+              <div className={`bubble-in ${round.mode === 'compose' ? 'bubble-compose' : ''}`}>
+                {round.text}
+              </div>
               <div className="replies-row">
                 {round.replies.map((reply, i) => (
                   <ReplyCard
@@ -147,7 +155,7 @@ export default function ChatPane({
           {generating && (
             <div className="generating-tip">
               <span className="spinner" />
-              AI 正在构思 3 条话术…
+              {mode === 'compose' ? 'AI 正在把你的想法写成 3 条消息…' : 'AI 正在构思 3 条话术…'}
             </div>
           )}
           <div ref={bottomRef} />
@@ -157,9 +165,22 @@ export default function ChatPane({
       <div className="composer-wrap">
         <div className="composer">
           <div className="composer-box">
+            <div className="mode-toggle">
+              {Object.entries(MODES).map(([k, m]) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={`mode-btn ${mode === k ? 'active' : ''}`}
+                  onClick={() => setMode(k)}
+                  disabled={generating}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
             <textarea
               value={message}
-              placeholder={`输入${ROLES[session.role]?.label}对你说的话…`}
+              placeholder={MODES[mode].placeholder}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -169,31 +190,32 @@ export default function ChatPane({
               }}
             />
             <div className="composer-toolbar">
-              <div className="purpose-row">
-                <span className="selector-label">目的</span>
-                <div className="purpose-chips">
-                  {ROLES[session.role].purposes.map((p) => (
-                    <button
-                      key={p}
-                      className={`chip ${purpose === p ? 'active' : ''}`}
-                      onClick={() => setPurpose(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
+              {mode === 'reply' && (
+                <div className="purpose-row">
+                  <div className="purpose-chips">
+                    {ROLES[session.role].purposes.map((p) => (
+                      <button
+                        key={p}
+                        className={`chip ${purpose === p ? 'active' : ''}`}
+                        onClick={() => setPurpose(p)}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="composer-actions">
                 <button className="btn-clear" onClick={clear} disabled={generating}>
                   清空
                 </button>
-              <button
-                className="btn btn-primary composer-send"
-                onClick={submit}
-                disabled={generating || !message.trim()}
-              >
-                {generating ? '生成中…' : <><IconSparkles size={15} /> 生成</>}
-              </button>
+                <button
+                  className="btn btn-primary composer-send"
+                  onClick={submit}
+                  disabled={generating || !message.trim()}
+                >
+                  {generating ? '生成中…' : <><IconSparkles size={15} /> 生成</>}
+                </button>
               </div>
             </div>
           </div>

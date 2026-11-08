@@ -109,11 +109,11 @@ settingsRouter.post('/llm/test', llmTestLimiter, async (req, res) => {
 /**
  * 生成话术：供会话路由复用（也导出给测试）。
  */
-export async function generateReplies(settings, { session, content, purpose, message }) {
+export async function generateReplies(settings, { session, content, purpose, message, mode }) {
   const finalPurpose = isValidPurpose(session.role, purpose) ? purpose : defaultPurpose(session.role);
   const { content: raw } = await chatComplete(settings, {
-    system: buildSystemPrompt(),
-    user: buildUserMessage({ session, content, purpose: finalPurpose, message }),
+    system: buildSystemPrompt(mode),
+    user: buildUserMessage({ session, content, purpose: finalPurpose, message, mode }),
   });
   const parsed = parseJSONLoose(raw);
   const replies = Array.isArray(parsed.replies)

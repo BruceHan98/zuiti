@@ -24,6 +24,12 @@ export const ROLES = {
 
 export const ROLE_KEYS = Object.keys(ROLES);
 
+/** 生成模式：reply=针对对方的话回话；compose=把我的想法写成消息 */
+export const MODES = {
+  reply: { label: '回复 TA', placeholder: '输入对方对你说的话…' },
+  compose: { label: '我的想法', placeholder: '输入你的想法，AI 帮你写成可发送的消息…' },
+};
+
 export const REPLY_STYLES = ['稳妥', '主动', '幽默'];
 
 /** MBTI 十六型人格（可选，用于让 AI 结合对方性格生成更舒服的回复） */

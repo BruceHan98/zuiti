@@ -81,7 +81,26 @@ export function trimRounds(rounds, n = RECENT_ROUNDS) {
   return rounds.slice(-n);
 }
 
-export function buildSystemPrompt() {
+/** 生成模式：reply=针对对方的话回话；compose=把用户想法写成可直接发送的消息 */
+export const MODES = ['reply', 'compose'];
+
+export function isValidMode(mode) {
+  return !mode || mode === 'reply' || mode === 'compose';
+}
+
+export function buildSystemPrompt(mode) {
+  if (mode === 'compose') {
+    return [
+      '你是聊天表达顾问，帮用户把自己的想法润色成可直接发送的消息。',
+      '根据【设定】与【我的想法】写出3条可发送的消息，要求：',
+      '1. 三条侧重不同：A稳妥得体、B主动推进、C轻松幽默；务必忠实保留用户想法的核心意图与关键信息',
+      '2. 每条≤80字，口语化可直接发送，符合双方关系，可延续已有聊天氛围',
+      '3. 若设定了对方MBTI性格，须贴合其偏好与雷区，让对方读起来舒服自然',
+      '4. 严格只输出JSON（不要多余文字）：',
+      '{"replies":["...","...","..."],"summary":"≤150字对话摘要"}',
+      'summary 规则：融合【旧摘要】与本次想法及最终表达，保留双方关系、称呼、性格特征、情绪基调、关键事实与承诺，供后续轮次使用。',
+    ].join('\n');
+  }
   return [
     '你是聊天回复顾问，帮用户想出如何回复对方的消息。',
     '根据【设定】与【最新消息】给出3条回复话术，要求：',
@@ -96,12 +115,13 @@ export function buildSystemPrompt() {
 
 /**
  * 构造发送给模型的用户消息（已裁剪，最小化 token）。
- * round 结构：{ text, replies: [3], chosen: number|null, purpose, ts }
+ * round 结构：{ text, replies: [3], chosen: number|null, purpose, mode, ts }
  */
-export function buildUserMessage({ session, content, purpose, message }) {
+export function buildUserMessage({ session, content, purpose, message, mode }) {
   const roleLabel = ROLES[session.role]?.label || session.role;
   const lines = [];
-  const settingParts = [`关系:${roleLabel}`, `目的:${purpose}`];
+  const settingParts = [`关系:${roleLabel}`];
+  if (mode !== 'compose' && purpose) settingParts.push(`目的:${purpose}`);
   if (session.note) settingParts.push(`对方:${session.note}`);
   if (session.mbti) {
     settingParts.push(`对方MBTI:${session.mbti}（${MBTI_PROFILES[session.mbti] || ''}）`);
@@ -112,11 +132,19 @@ export function buildUserMessage({ session, content, purpose, message }) {
   if (recent.length) {
     lines.push('【近期对话】');
     for (const r of recent) {
-      lines.push(`对方:${r.text}`);
+      if (r.mode === 'compose') {
+        lines.push(`我的想法:${r.text}`);
+      } else {
+        lines.push(`对方:${r.text}`);
+      }
       const chosen = r.chosen != null ? r.replies[r.chosen] : null;
       lines.push(chosen ? `我方发送:${chosen}` : `我方发送:(未从建议中选用)`);
     }
   }
-  lines.push(`【最新消息】对方:${message}`);
+  if (mode === 'compose') {
+    lines.push(`【我的想法】${message}`);
+  } else {
+    lines.push(`【最新消息】对方:${message}`);
+  }
   return lines.join('\n');
 }

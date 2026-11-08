@@ -598,6 +598,47 @@ test('MBTI：创建/修改/注入提示词/无效值校验', async () => {
   assert.equal(bad2.status, 400);
 });
 
+test('想法模式（compose）：提示词/轮次结构/上下文回填', async () => {
+  const token = await createUser('modeuser');
+  await api.req('PUT', '/api/settings/llm', {
+    token,
+    body: { provider: 'custom', baseUrl: llmBase, apiKey: 'sk-x', model: 'm' },
+  });
+  const s = await api.req('POST', '/api/sessions', {
+    token,
+    body: { role: 'lover', name: '想法测试' },
+  });
+  const sid = s.json.session.id;
+
+  // compose 生成：系统提示切换、用户消息为【我的想法】
+  const gen = await api.req('POST', `/api/sessions/${sid}/generate`, {
+    token,
+    body: { message: '想约她周末去看展', purpose: '日常关心', mode: 'compose' },
+  });
+  assert.equal(gen.status, 200);
+  assert.equal(Array.isArray(gen.json.replies), true);
+  const lastCall = llmCalls[llmCalls.length - 1].body.messages;
+  assert.ok(lastCall[0].content.includes('表达顾问'), 'compose 系统提示应切换为表达顾问');
+  assert.ok(lastCall[1].content.includes('【我的想法】想约她周末去看展'), '用户消息应为【我的想法】');
+  assert.ok(!lastCall[1].content.includes('目的:'), 'compose 模式不应注入目的');
+
+  // 轮次结构带 mode，purpose 置空
+  const detail = await api.req('GET', `/api/sessions/${sid}`, { token });
+  const round = detail.json.content.rounds[0];
+  assert.equal(round.mode, 'compose');
+  assert.equal(round.purpose, '');
+
+  // 下一轮 reply 模式上下文应区分「我的想法」
+  await api.req('POST', `/api/sessions/${sid}/generate`, {
+    token,
+    body: { message: '她说周末要加班', purpose: '日常关心', mode: 'reply' },
+  });
+  const lastPrompt = llmCalls[llmCalls.length - 1].body.messages.map((m) => m.content).join('\n');
+  assert.ok(lastPrompt.includes('我的想法:想约她周末去看展'), '近期对话应回填为「我的想法」');
+  assert.ok(lastPrompt.includes('对方:她说周末要加班'), '最新消息应为对方话语');
+  assert.ok(lastCall[0] !== undefined, 'reply 系统提示保持回复顾问');
+});
+
 test('登录接口限流：爆破触发 429（接口，放在最后）', async () => {
   let got429 = false;
   for (let i = 0; i < 40; i++) {

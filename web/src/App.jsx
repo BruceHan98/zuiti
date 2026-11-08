@@ -125,12 +125,12 @@ export default function App() {
     }
   }
 
-  async function handleGenerate(message, purpose) {
+  async function handleGenerate(message, purpose, mode) {
     if (!activeId || generating) return false;
     setGenerating(true);
     setCopiedKey(null);
     try {
-      const res = await api.generate(activeId, message, purpose);
+      const res = await api.generate(activeId, message, purpose, mode);
       // 本地立即追加这一轮，避免整页刷新
       setActiveDetail((prev) => ({
         ...prev,
@@ -138,7 +138,7 @@ export default function App() {
           summary: res.summary,
           rounds: [
             ...(prev?.content?.rounds || []),
-            { text: message, purpose, replies: res.replies, chosen: null, ts: Date.now() },
+            { text: message, purpose: mode === 'compose' ? '' : purpose, mode, replies: res.replies, chosen: null, ts: Date.now() },
           ],
         },
       }));

@@ -157,13 +157,14 @@ sessionsRouter.delete('/:id/round/:roundIndex', (req, res) => {
   res.json({ ok: true, rounds: content.rounds.length });
 });
 
-/** 生成 3 条推荐话术 */
+/** 生成 3 条推荐话术（reply=针对对方的话；compose=把用户想法写成消息） */
 sessionsRouter.post('/:id/generate', generateLimiter, async (req, res) => {
   const s = getSessionForUser(req.params.id, req.user.id);
   if (!s) return res.status(404).json({ error: '会话不存在' });
   const message = String(req.body?.message || '').trim();
-  if (!message) return res.status(400).json({ error: '请输入对方说的话' });
+  if (!message) return res.status(400).json({ error: '请输入内容' });
   if (message.length > 2000) return res.status(400).json({ error: '消息过长（≤2000字）' });
+  const mode = req.body?.mode === 'compose' ? 'compose' : 'reply';
   const purpose = String(req.body?.purpose || '');
 
   const llm = readLLM(req.user.id);
@@ -172,14 +173,15 @@ sessionsRouter.post('/:id/generate', generateLimiter, async (req, res) => {
   const content = decodeContent(s);
   let result;
   try {
-    result = await generateReplies(llm, { session: s, content, purpose, message });
+    result = await generateReplies(llm, { session: s, content, purpose, message, mode });
   } catch (e) {
     return res.status(502).json({ error: e.message, code: e.code || 'LLM_ERROR' });
   }
 
   content.rounds.push({
     text: message,
-    purpose,
+    purpose: mode === 'compose' ? '' : purpose,
+    mode,
     replies: result.replies,
     chosen: null,
     ts: Date.now(),
