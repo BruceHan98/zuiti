@@ -1,5 +1,5 @@
 import { ROLES } from '../constants.js';
-import { IconChat, IconEdit, IconLogout, IconPlus, IconSettings, IconTrash } from './Icons.jsx';
+import { IconChat, IconLogout, IconPlus, IconSettings, IconTrash } from './Icons.jsx';
 
 function timeLabel(ts) {
   const d = new Date(ts);
@@ -17,7 +17,6 @@ export default function Sidebar({
   user,
   onSelect,
   onNew,
-  onRename,
   onDelete,
   onOpenSettings,
   onLogout,
@@ -53,13 +52,6 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="session-actions" onClick={(e) => e.stopPropagation()}>
-                <button
-                  className="icon-btn"
-                  title="重命名"
-                  onClick={() => onRename(s)}
-                >
-                  <IconEdit size={14} />
-                </button>
                 <button
                   className="icon-btn danger"
                   title="删除"

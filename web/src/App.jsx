@@ -7,7 +7,8 @@ import ChatPane from './components/ChatPane.jsx';
 import SettingsModal from './components/SettingsModal.jsx';
 import NewSessionModal from './components/NewSessionModal.jsx';
 import MbtiPickerModal from './components/MbtiPickerModal.jsx';
-import { IconBrain, IconMenu, IconPuzzle } from './components/Icons.jsx';
+import RenameModal from './components/RenameModal.jsx';
+import { IconBrain, IconEdit, IconMenu, IconPuzzle } from './components/Icons.jsx';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -19,6 +20,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showNewSession, setShowNewSession] = useState(false);
   const [showMbtiPicker, setShowMbtiPicker] = useState(false);
+  const [renaming, setRenaming] = useState(null); // 待重命名的会话对象
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
@@ -77,15 +79,17 @@ export default function App() {
     }
   }
 
-  async function handleRename(s) {
-    const name = window.prompt('新的会话名称', s.name);
-    if (name == null) return;
+  /** 保存会话重命名（RenameModal 回调） */
+  async function handleRenameSave(name) {
     try {
-      await api.updateSession(s.id, { name: name.trim() });
+      await api.updateSession(renaming.id, { name });
       await refreshSessions();
-      if (s.id === activeId) await openSession(s.id);
+      if (renaming.id === activeId) await openSession(renaming.id);
+      notify('会话已重命名');
+      return true;
     } catch (e) {
       notify(e.message);
+      return false;
     }
   }
 
@@ -165,7 +169,7 @@ export default function App() {
       document.execCommand('copy');
       ta.remove();
     }
-    setCopiedKey(replyIndex);
+    setCopiedKey(`${roundIndex}-${replyIndex}`);
     // 同步标记选用（失败不影响复制体验）
     try {
       await api.chooseReply(activeId, roundIndex, replyIndex);
@@ -233,7 +237,6 @@ export default function App() {
           else if (id != null) openSession(id);
         }}
         onNew={() => setShowNewSession(true)}
-        onRename={handleRename}
         onDelete={handleDelete}
         onOpenSettings={() => setShowSettings(true)}
         onLogout={handleLogout}
@@ -244,7 +247,18 @@ export default function App() {
           <button className="icon-btn menu-toggle" onClick={() => setSidebarOpen(true)}>
             <IconMenu size={18} />
           </button>
-          <span className="title">{session ? session.name : '回话助手'}</span>
+          {session ? (
+            <button
+              className="title-btn"
+              onClick={() => setRenaming(session)}
+              title="点击修改会话名称"
+            >
+              <span className="t">{session.name}</span>
+              <IconEdit size={13} className="t-edit" />
+            </button>
+          ) : (
+            <span className="title">回话助手</span>
+          )}
           {session && <span className="role-chip">{ROLES[session.role]?.label}</span>}
           {session && (
             <button
@@ -306,6 +320,13 @@ export default function App() {
           sessionName={session.name}
           onClose={() => setShowMbtiPicker(false)}
           onSave={handleSaveMbti}
+        />
+      )}
+      {renaming && (
+        <RenameModal
+          current={renaming.name}
+          onClose={() => setRenaming(null)}
+          onSave={handleRenameSave}
         />
       )}
       {toast && <div className="toast">{toast}</div>}

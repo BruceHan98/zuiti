@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { REPLY_STYLES, ROLES } from '../constants.js';
 import { IconChat, IconCheck, IconCopy, IconEdit, IconSparkles, IconTrash } from './Icons.jsx';
 
-function ReplyCard({ reply, index, chosen, onCopy, copiedKey }) {
-  const isCopied = copiedKey === index;
+function ReplyCard({ reply, index, chosen, copied, onCopy }) {
   const isChosen = chosen === index;
   return (
     <div className={`reply-card ${isChosen ? 'chosen' : ''}`}>
@@ -14,11 +13,11 @@ function ReplyCard({ reply, index, chosen, onCopy, copiedKey }) {
           {String.fromCharCode(65 + index)} · {REPLY_STYLES[index] || '推荐'}
         </span>
         <button
-          className={`card-icon-btn ${isCopied ? 'copied' : ''}`}
+          className={`card-icon-btn ${copied ? 'copied' : ''}`}
           onClick={() => onCopy(index)}
-          title={isCopied ? '已复制并选用' : '复制并选用'}
+          title={copied ? '已复制并选用' : '复制并选用'}
         >
-          {isCopied ? <IconCheck size={15} /> : <IconCopy size={15} />}
+          {copied ? <IconCheck size={15} /> : <IconCopy size={15} />}
         </button>
       </div>
       <div className="reply-text">{reply}</div>
@@ -137,7 +136,7 @@ export default function ChatPane({
                     reply={reply}
                     index={i}
                     chosen={round.chosen}
-                    copiedKey={ri === rounds.length - 1 ? copiedKey : null}
+                    copied={copiedKey === `${ri}-${i}`}
                     onCopy={(idx) => onCopy(ri, idx)}
                   />
                 ))}
