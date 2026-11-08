@@ -1,0 +1,32 @@
+services:
+  huichat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: huichat:latest
+    container_name: huichat
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      NODE_ENV: production
+      # 数据目录（SQLite 库 + 自动生成的 jwt.secret / master.key 都在这里，务必持久化）
+      DATA_DIR: /data
+      # 可选：显式指定密钥（不设则首次启动自动生成并写入 /data，重启不变）
+      # JWT_SECRET: "change-me-to-a-long-random-string"
+      # MASTER_KEY: "64-hex-chars-32-bytes"   # openssl rand -hex 32
+      # 可选：容器内访问 LLM API 需要走代理时开启（宿主机代理）
+      # HTTP_PROXY: "http://host.docker.internal:10809"
+      # HTTPS_PROXY: "http://host.docker.internal:10809"
+      # NO_PROXY: "localhost,127.0.0.1"
+    volumes:
+      - huichat-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  huichat-data:
