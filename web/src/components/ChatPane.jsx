@@ -1,24 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { REPLY_STYLES, ROLES } from '../constants.js';
 
-function ReplyCard({ reply, index, chosen, onCopy, onChoose, copiedKey }) {
+function ReplyCard({ reply, index, chosen, onCopy, copiedKey }) {
   const isCopied = copiedKey === index;
+  const isChosen = chosen === index;
   return (
-    <div className={`reply-card ${chosen === index ? 'chosen' : ''}`}>
-      {chosen === index && <span className="chosen-badge">已选用</span>}
+    <div className={`reply-card ${isChosen ? 'chosen' : ''}`}>
+      {isChosen && <span className="chosen-badge">已选用</span>}
       <span className="reply-tag">
         <span className="tag-dot" />
         {String.fromCharCode(65 + index)} · {REPLY_STYLES[index] || '推荐'}
       </span>
       <div className="reply-text">{reply}</div>
-      <div style={{ display: 'flex', gap: 7 }}>
-        <button className={`copy-btn ${isCopied ? 'copied' : ''}`} onClick={() => onCopy(index)}>
-          {isCopied ? '✓ 已复制' : '复制'}
-        </button>
-        <button className="copy-btn" onClick={() => onChoose(index)} title="标记为实际发送的回复">
-          选用
-        </button>
-      </div>
+      <button className={`copy-btn ${isCopied ? 'copied' : ''}`} onClick={() => onCopy(index)}>
+        {isCopied ? '✓ 已复制选用' : '复制'}
+      </button>
     </div>
   );
 }
@@ -28,7 +24,6 @@ export default function ChatPane({
   content,
   generating,
   onGenerate,
-  onChoose,
   onCopy,
   onDeleteRound,
   onNotify,
@@ -137,7 +132,6 @@ export default function ChatPane({
                     chosen={round.chosen}
                     copiedKey={ri === rounds.length - 1 ? copiedKey : null}
                     onCopy={(idx) => onCopy(ri, idx)}
-                    onChoose={(idx) => onChoose(ri, idx)}
                   />
                 ))}
               </div>
@@ -169,26 +163,32 @@ export default function ChatPane({
               }}
             />
             <div className="composer-toolbar">
-              <span className="selector-label">目的</span>
-              {ROLES[session.role].purposes.map((p) => (
-                <button
-                  key={p}
-                  className={`chip ${purpose === p ? 'active' : ''}`}
-                  onClick={() => setPurpose(p)}
-                >
-                  {p}
+              <div className="purpose-row">
+                <span className="selector-label">目的</span>
+                <div className="purpose-chips">
+                  {ROLES[session.role].purposes.map((p) => (
+                    <button
+                      key={p}
+                      className={`chip ${purpose === p ? 'active' : ''}`}
+                      onClick={() => setPurpose(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="composer-actions">
+                <button className="btn-clear" onClick={clear} disabled={generating}>
+                  清空
                 </button>
-              ))}
-              <button className="btn-clear" onClick={clear} disabled={generating}>
-                清空
-              </button>
-              <button
-                className="btn btn-primary composer-send"
-                onClick={submit}
-                disabled={generating || !message.trim()}
-              >
-                {generating ? '生成中…' : '✨ 生成'}
-              </button>
+                <button
+                  className="btn btn-primary composer-send"
+                  onClick={submit}
+                  disabled={generating || !message.trim()}
+                >
+                  {generating ? '生成中…' : '✨ 生成'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

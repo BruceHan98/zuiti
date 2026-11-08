@@ -149,6 +149,7 @@ export default function App() {
     }
   }
 
+  /** 复制即选用：写入剪贴板后同时标记为实际发送的回复 */
   async function handleCopy(roundIndex, replyIndex) {
     const round = activeDetail?.content?.rounds?.[roundIndex];
     if (!round) return;
@@ -164,10 +165,7 @@ export default function App() {
       ta.remove();
     }
     setCopiedKey(replyIndex);
-    notify('已复制到剪贴板');
-  }
-
-  async function handleChoose(roundIndex, replyIndex) {
+    // 同步标记选用（失败不影响复制体验）
     try {
       await api.chooseReply(activeId, roundIndex, replyIndex);
       setActiveDetail((prev) => {
@@ -175,10 +173,10 @@ export default function App() {
         if (rounds[roundIndex]) rounds[roundIndex] = { ...rounds[roundIndex], chosen: replyIndex };
         return { ...prev, content: { ...prev.content, rounds } };
       });
-      notify('已标记为实际发送内容');
-    } catch (e) {
-      notify(e.message);
+    } catch {
+      /* 标记失败仅静默 */
     }
+    notify('已复制，并标记为选用');
   }
 
   /** 删除某一轮记录；silent 时不弹「已删除」提示（用于编辑回填场景） */
@@ -289,7 +287,6 @@ export default function App() {
           generating={generating}
           onGenerate={handleGenerate}
           onCopy={handleCopy}
-          onChoose={handleChoose}
           onDeleteRound={handleDeleteRound}
           onNotify={notify}
           copiedKey={copiedKey}
