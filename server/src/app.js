@@ -36,7 +36,13 @@ export function createApp() {
 }
 
 function setNoCacheForSw(res, filePath) {
-  if (filePath.endsWith('sw.js') || filePath.endsWith('index.html')) {
+  // SW 注册脚本 / 清单 / 入口页必须实时生效，否则部署后客户端拿旧缓存
+  if (
+    filePath.endsWith('sw.js') ||
+    filePath.endsWith('index.html') ||
+    filePath.endsWith('manifest.webmanifest') ||
+    filePath.endsWith('registerSW.js')
+  ) {
     res.setHeader('Cache-Control', 'no-cache');
   }
 }

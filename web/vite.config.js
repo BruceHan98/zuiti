@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // prompt 模式：由应用代码控制更新时机（检测到新版本立即激活并刷新页面）
+      registerType: 'prompt',
       includeAssets: ['icon.svg'],
       manifest: {
         name: '回话助手',
