@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { REPLY_STYLES, ROLES } from '../constants.js';
+import { IconChat, IconCheck, IconCopy, IconEdit, IconSparkles, IconTrash } from './Icons.jsx';
 
 function ReplyCard({ reply, index, chosen, onCopy, copiedKey }) {
   const isCopied = copiedKey === index;
@@ -7,14 +8,20 @@ function ReplyCard({ reply, index, chosen, onCopy, copiedKey }) {
   return (
     <div className={`reply-card ${isChosen ? 'chosen' : ''}`}>
       {isChosen && <span className="chosen-badge">已选用</span>}
-      <span className="reply-tag">
-        <span className="tag-dot" />
-        {String.fromCharCode(65 + index)} · {REPLY_STYLES[index] || '推荐'}
-      </span>
+      <div className="reply-head">
+        <span className="reply-tag">
+          <span className="tag-dot" />
+          {String.fromCharCode(65 + index)} · {REPLY_STYLES[index] || '推荐'}
+        </span>
+        <button
+          className={`card-icon-btn ${isCopied ? 'copied' : ''}`}
+          onClick={() => onCopy(index)}
+          title={isCopied ? '已复制并选用' : '复制并选用'}
+        >
+          {isCopied ? <IconCheck size={15} /> : <IconCopy size={15} />}
+        </button>
+      </div>
       <div className="reply-text">{reply}</div>
-      <button className={`copy-btn ${isCopied ? 'copied' : ''}`} onClick={() => onCopy(index)}>
-        {isCopied ? '✓ 已复制选用' : '复制'}
-      </button>
     </div>
   );
 }
@@ -46,7 +53,7 @@ export default function ChatPane({
     return (
       <div className="messages">
         <div className="empty-state">
-          <div className="big">💭</div>
+          <div className="big"><IconChat size={36} /></div>
           <h3>开始一段对话</h3>
           <p>从左侧选择或新建一个会话</p>
         </div>
@@ -115,10 +122,10 @@ export default function ChatPane({
                 </span>
                 <span className="round-actions">
                   <button className="round-btn" title="删除后回填到输入框，可修改后重新生成" onClick={() => editRound(ri)} disabled={generating}>
-                    ✎ 重新编辑
+                    <IconEdit size={13} /> 重新编辑
                   </button>
                   <button className="round-btn danger" title="删除这条记录" onClick={() => deleteRound(ri)} disabled={generating}>
-                    🗑 删除
+                    <IconTrash size={13} /> 删除
                   </button>
                 </span>
               </div>
@@ -181,13 +188,13 @@ export default function ChatPane({
                 <button className="btn-clear" onClick={clear} disabled={generating}>
                   清空
                 </button>
-                <button
-                  className="btn btn-primary composer-send"
-                  onClick={submit}
-                  disabled={generating || !message.trim()}
-                >
-                  {generating ? '生成中…' : '✨ 生成'}
-                </button>
+              <button
+                className="btn btn-primary composer-send"
+                onClick={submit}
+                disabled={generating || !message.trim()}
+              >
+                {generating ? '生成中…' : <><IconSparkles size={15} /> 生成</>}
+              </button>
               </div>
             </div>
           </div>

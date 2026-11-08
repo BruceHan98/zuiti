@@ -7,6 +7,7 @@ import ChatPane from './components/ChatPane.jsx';
 import SettingsModal from './components/SettingsModal.jsx';
 import NewSessionModal from './components/NewSessionModal.jsx';
 import MbtiPickerModal from './components/MbtiPickerModal.jsx';
+import { IconBrain, IconMenu, IconPuzzle } from './components/Icons.jsx';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -241,7 +242,7 @@ export default function App() {
       <main className="main">
         <div className="topbar">
           <button className="icon-btn menu-toggle" onClick={() => setSidebarOpen(true)}>
-            ☰
+            <IconMenu size={18} />
           </button>
           <span className="title">{session ? session.name : '回话助手'}</span>
           {session && <span className="role-chip">{ROLES[session.role]?.label}</span>}
@@ -251,13 +252,13 @@ export default function App() {
               onClick={() => setShowMbtiPicker(true)}
               title="点击修改对方的 MBTI"
             >
-              {session.mbti ? `🧩 ${session.mbti}` : '＋ MBTI'}
+              <IconPuzzle size={13} /> {session.mbti || 'MBTI'}
             </button>
           )}
           <span className="spacer" />
           {summary && (
             <button className="summary-toggle" onClick={() => setShowSummary((v) => !v)}>
-              🧠 AI 记忆
+              <IconBrain size={13} /> AI 记忆
             </button>
           )}
         </div>

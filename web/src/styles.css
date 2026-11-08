@@ -425,6 +425,9 @@ input, textarea, select { font-family: inherit; }
   border-radius: 999px;
   padding: 4px 11px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   transition: all 0.13s;
 }
 
@@ -495,6 +498,9 @@ input, textarea, select { font-family: inherit; }
   font-size: 12px;
   font-weight: 500;
   color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all 0.15s;
 }
 .summary-toggle:hover { border-color: var(--primary); color: var(--primary); }
@@ -531,6 +537,7 @@ input, textarea, select { font-family: inherit; }
   border-radius: 26px;
   box-shadow: var(--shadow);
   margin-bottom: 10px;
+  color: var(--primary);
 }
 
 .empty-state h3 { margin: 0; color: var(--text); font-size: 16px; }
@@ -575,6 +582,9 @@ input, textarea, select { font-family: inherit; }
   font-size: 12px;
   color: var(--text-2);
   line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   transition: all 0.12s;
 }
 
@@ -635,6 +645,13 @@ input, textarea, select { font-family: inherit; }
   background: #f7fefb;
 }
 
+.reply-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .reply-tag {
   font-size: 11px;
   font-weight: 700;
@@ -661,25 +678,31 @@ input, textarea, select { font-family: inherit; }
   color: var(--text);
 }
 
-.copy-btn {
-  border: 1.5px solid var(--border);
+/* 卡片右上角图标按钮（复制并选用） */
+.card-icon-btn {
+  border: 0;
   background: transparent;
-  border-radius: 9px;
-  padding: 8px;
-  width: 100%;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  transition: all 0.14s;
+  color: var(--text-3);
+  border-radius: 8px;
+  padding: 5px;
+  line-height: 0;
+  flex-shrink: 0;
+  transition: all 0.13s;
 }
 
-.copy-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(99, 102, 241, 0.04); }
+.card-icon-btn:hover {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.09);
+}
 
-.copy-btn.copied { border-color: var(--success); color: var(--success); background: #ecfdf5; }
+.card-icon-btn.copied {
+  color: var(--success);
+  background: #ecfdf5;
+}
+
+.reply-card.chosen .card-icon-btn.copied {
+  color: var(--success);
+}
 
 .chosen-badge {
   position: absolute;
@@ -1061,7 +1084,7 @@ input, textarea, select { font-family: inherit; }
   .replies-row { gap: 9px; margin-top: 10px; }
   .reply-card { padding: 11px 12px; gap: 8px; border-radius: 14px; }
   .reply-text { font-size: 13px; line-height: 1.6; }
-  .copy-btn { padding: 8px; font-size: 12px; }
+  .card-icon-btn { padding: 6px; }
 }
 
 @keyframes sheet-in {
