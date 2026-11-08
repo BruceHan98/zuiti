@@ -11,18 +11,17 @@ export default defineConfig({
       manifest: {
         name: '回话助手',
         short_name: '回话助手',
+        lang: 'zh-CN',
         description: 'AI 帮你想好怎么回复每一条消息',
         start_url: '/',
         display: 'standalone',
         background_color: '#f6f7fb',
         theme_color: '#6366f1',
         icons: [
-          {
-            src: '/icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
       workbox: {
