@@ -128,18 +128,17 @@ test('parseJSONLoose 支持纯 JSON / 围栏 / 带闲聊', () => {
 });
 
 // ---------- 单元：节省 token 的上下文裁剪 ----------
-test('trimRounds 只保留最近 2 轮', () => {
+test('trimRounds 只保留最近 3 轮', () => {
   const rounds = [1, 2, 3, 4, 5].map((i) => ({ text: `msg-${i}`, replies: [`r${i}`], chosen: 0 }));
   const trimmed = trimRounds(rounds);
-  assert.equal(trimmed.length, 2);
-  assert.deepEqual(trimmed.map((r) => r.text), ['msg-4', 'msg-5']);
+  assert.equal(trimmed.length, 3);
+  assert.deepEqual(trimmed.map((r) => r.text), ['msg-3', 'msg-4', 'msg-5']);
 });
 
-test('buildUserMessage：含摘要与最近轮，不含更早历史', () => {
+test('buildUserMessage：含最近 3 轮，不含更早历史', () => {
   const session = { role: 'lover', note: '小美' };
   const content = {
-    summary: '旧摘要内容',
-    rounds: [1, 2, 3].map((i) => ({
+    rounds: [1, 2, 3, 4].map((i) => ({
       text: `msg-${i}`,
       replies: [`回复${i}`],
       chosen: 0,
@@ -150,9 +149,9 @@ test('buildUserMessage：含摘要与最近轮，不含更早历史', () => {
   assert.ok(msg.includes('关系:恋人'));
   assert.ok(msg.includes('目的:化解矛盾'));
   assert.ok(msg.includes('对方:小美'));
-  assert.ok(msg.includes('旧摘要'));
-  assert.ok(msg.includes('msg-3'), '应含最近一轮');
-  assert.ok(msg.includes('msg-2'), '应含最近两轮');
+  assert.ok(msg.includes('msg-4'), '应含最近一轮');
+  assert.ok(msg.includes('msg-3'), '应含最近两轮');
+  assert.ok(msg.includes('msg-2'), '应含最近三轮');
   assert.ok(!msg.includes('msg-1'), '更早的历史不应出现（省 token）');
   assert.ok(msg.includes('msg-new'));
 });
@@ -289,7 +288,7 @@ test('LLM 设置保存（Key 脱敏返回）+ 连通性测试', async () => {
   assert.equal(testConn.json.ok, true);
 });
 
-test('端到端生成：3 条话术 + 摘要滚动 + token 裁剪 + 落库加密', async () => {
+test('端到端生成：3 条话术 + 3 轮 token 裁剪 + 落库加密', async () => {
   const token = await createUser('henry');
   await api.req('PUT', '/api/settings/llm', {
     token,
@@ -302,12 +301,13 @@ test('端到端生成：3 条话术 + 摘要滚动 + token 裁剪 + 落库加密
   const sid = s.json.session.id;
   const gen0 = llmCalls.length;
 
-  // 四轮生成（第 4 轮时已有 3 轮历史，可验证裁剪生效）
+  // 五轮生成（第 5 轮时已有 4 轮历史，可验证 3 轮裁剪生效）
   for (const [i, msg] of [
     '今天加班吗？',
     '项目进展如何？',
     '这个需求能排上吗？',
     '周末团建来吗？',
+    '下周汇报准备啥？',
   ].entries()) {
     const r = await api.req('POST', `/api/sessions/${sid}/generate`, {
       token,
@@ -317,35 +317,32 @@ test('端到端生成：3 条话术 + 摘要滚动 + token 裁剪 + 落库加密
     assert.equal(r.json.replies.length, 3, '应返回 3 条话术');
   }
 
-  // 第 4 轮生成时发送给模型的 prompt：
+  // 第 5 轮生成时发送给模型的 prompt：
   const lastPrompt = llmCalls[llmCalls.length - 1].body.messages.map((m) => m.content).join('\n');
-  assert.ok(lastPrompt.includes('周末团建来吗？'), '必须包含最新消息');
-  assert.ok(lastPrompt.includes('这个需求能排上吗？'), '必须包含最近 1 轮历史');
-  assert.ok(lastPrompt.includes('项目进展如何？'), '必须包含最近 2 轮历史');
-  assert.ok(lastPrompt.includes('摘要#'), '必须携带滚动摘要');
+  assert.ok(lastPrompt.includes('下周汇报准备啥？'), '必须包含最新消息');
+  assert.ok(lastPrompt.includes('周末团建来吗？'), '必须包含最近 1 轮历史');
+  assert.ok(lastPrompt.includes('这个需求能排上吗？'), '必须包含最近 2 轮历史');
+  assert.ok(lastPrompt.includes('项目进展如何？'), '必须包含最近 3 轮历史');
   assert.ok(!lastPrompt.includes('今天加班吗？'), '更早历史不应发送（省 token）');
-  // 单次请求同时完成话术与摘要，不重复调用
-  assert.equal(llmCalls.length - gen0, 4, '四轮生成应恰好 4 次 LLM 调用');
+  assert.equal(llmCalls.length - gen0, 5, '五轮生成应恰好 5 次 LLM 调用');
 
   // 选用第 2 条回复
   const detail = await api.req('GET', `/api/sessions/${sid}`, { token });
-  assert.equal(detail.json.content.rounds.length, 4);
-  assert.ok(detail.json.content.summary.startsWith('摘要#'));
+  assert.equal(detail.json.content.rounds.length, 5);
+  assert.equal(detail.json.content.summary, undefined, '不再返回摘要');
   const choose = await api.req('PUT', `/api/sessions/${sid}/choose`, {
     token,
-    body: { roundIndex: 3, replyIndex: 1 },
+    body: { roundIndex: 4, replyIndex: 1 },
   });
   assert.equal(choose.status, 200);
   const detail2 = await api.req('GET', `/api/sessions/${sid}`, { token });
-  assert.equal(detail2.json.content.rounds[3].chosen, 1);
+  assert.equal(detail2.json.content.rounds[4].chosen, 1);
 
   // 落库密文校验：DB 中不含明文消息
   const raw = db.prepare('SELECT content_enc FROM chat_sessions WHERE id = ?').get(sid);
   assert.ok(!raw.content_enc.includes('周末团建来吗？'), '会话内容必须加密落库');
-  assert.ok(!raw.content_enc.includes('摘要#'), '摘要必须加密落库');
   const decrypted = JSON.parse(decrypt(raw.content_enc));
-  assert.equal(decrypted.rounds.length, 4);
-  assert.ok(decrypted.summary.startsWith('摘要#'));
+  assert.equal(decrypted.rounds.length, 5);
 });
 
 test('生成接口校验：空消息 400 / 越权会话 404', async () => {

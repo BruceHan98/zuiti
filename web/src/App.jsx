@@ -8,7 +8,7 @@ import SettingsModal from './components/SettingsModal.jsx';
 import NewSessionModal from './components/NewSessionModal.jsx';
 import MbtiPickerModal from './components/MbtiPickerModal.jsx';
 import RenameModal from './components/RenameModal.jsx';
-import { IconBrain, IconEdit, IconMenu, IconPuzzle } from './components/Icons.jsx';
+import { IconEdit, IconMenu, IconPuzzle } from './components/Icons.jsx';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -24,7 +24,6 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
-  const [showSummary, setShowSummary] = useState(false);
   const toastTimer = useRef(null);
 
   const notify = useCallback((text) => {
@@ -135,7 +134,6 @@ export default function App() {
       setActiveDetail((prev) => ({
         ...prev,
         content: {
-          summary: res.summary,
           rounds: [
             ...(prev?.content?.rounds || []),
             { text: message, purpose: mode === 'compose' ? '' : purpose, mode, replies: res.replies, chosen: null, ts: Date.now() },
@@ -223,7 +221,6 @@ export default function App() {
   }
 
   const session = activeDetail?.session;
-  const summary = activeDetail?.content?.summary;
 
   return (
     <div className="app">
@@ -270,31 +267,7 @@ export default function App() {
             </button>
           )}
           <span className="spacer" />
-          {summary && (
-            <button className="summary-toggle" onClick={() => setShowSummary((v) => !v)}>
-              <IconBrain size={13} /> AI 记忆
-            </button>
-          )}
         </div>
-
-        {showSummary && summary && (
-          <div
-            style={{
-              margin: '14px 24px 0',
-              maxWidth: 780,
-              fontSize: 12.5,
-              color: 'var(--text-2)',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 14,
-              padding: '12px 16px',
-              lineHeight: 1.7,
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
-            {summary}
-          </div>
-        )}
 
         <ChatPane
           session={session}

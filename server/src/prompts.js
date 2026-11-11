@@ -34,7 +34,7 @@ export function defaultPurpose(role) {
 
 /** 会话内容（加密存储的 JSON）的初始结构 */
 export function emptyContent() {
-  return { summary: '', rounds: [] };
+  return { rounds: [] };
 }
 
 /** MBTI 十六型人格画像（与前端 constants.js 保持一致，用于提示词注入） */
@@ -69,10 +69,10 @@ export function isValidMbti(mbti) {
 
 /**
  * ============ 节省 Token 的核心：上下文裁剪 ============
- * 请求只携带：固定精简系统提示 + 一句话人设 + 滚动摘要 + 最近 RECENT_ROUNDS 轮原文 + 新消息。
+ * 请求只携带：固定精简系统提示 + 一句话人设 + 最近 RECENT_ROUNDS 轮原文 + 新消息。
  * 不携带全量历史。
  */
-export const RECENT_ROUNDS = 2;
+export const RECENT_ROUNDS = 3;
 
 /**
  * 取最近 n 轮对话。chosen 为空（用户未选用任何回复）时，用第一条建议作为参考但仍标记未选用。
@@ -89,27 +89,25 @@ export function isValidMode(mode) {
 }
 
 export function buildSystemPrompt(mode) {
+  const common = [
+    '2. 口语化可直接发送，不说空话套话；优先回应对方消息里的具体信息，给出具体内容或行动，而不是泛泛的客套',
+    '3. 若设定了对方MBTI性格，须贴合其偏好与雷区，让对方读起来舒服自然',
+    '4. 严格只输出JSON（不要多余文字）：',
+    '{"replies":["...","...","..."]}',
+  ];
   if (mode === 'compose') {
     return [
       '你是聊天表达顾问，帮用户把自己的想法润色成可直接发送的消息。',
       '根据【设定】与【我的想法】写出3条可发送的消息，要求：',
-      '1. 三条侧重不同：A稳妥得体、B主动推进、C轻松幽默；务必忠实保留用户想法的核心意图与关键信息',
-      '2. 每条≤80字，口语化可直接发送，符合双方关系，可延续已有聊天氛围',
-      '3. 若设定了对方MBTI性格，须贴合其偏好与雷区，让对方读起来舒服自然',
-      '4. 严格只输出JSON（不要多余文字）：',
-      '{"replies":["...","...","..."],"summary":"≤150字对话摘要"}',
-      'summary 规则：融合【旧摘要】与本次想法及最终表达，保留双方关系、称呼、性格特征、情绪基调、关键事实与承诺，供后续轮次使用。',
+      '1. 三条侧重不同：A稳妥得体、B主动推进、C轻松幽默；务必忠实保留用户想法的核心意图、关键信息与具体细节',
+      ...common,
     ].join('\n');
   }
   return [
     '你是聊天回复顾问，帮用户想出如何回复对方的消息。',
     '根据【设定】与【最新消息】给出3条回复话术，要求：',
     '1. 三条侧重不同：A稳妥得体、B主动推进、C轻松幽默；若与回复目的冲突，以目的优先',
-    '2. 每条≤80字，口语化可直接发送，符合双方关系与目的，可延续已有聊天氛围',
-    '3. 若设定了对方MBTI性格，须贴合其偏好与雷区，让对方读起来舒服自然',
-    '4. 严格只输出JSON（不要多余文字）：',
-    '{"replies":["...","...","..."],"summary":"≤150字对话摘要"}',
-    'summary 规则：融合【旧摘要】与新消息，保留双方关系、称呼、性格特征、情绪基调、关键事实与承诺，供后续轮次使用。',
+    ...common,
   ].join('\n');
 }
 
@@ -127,7 +125,6 @@ export function buildUserMessage({ session, content, purpose, message, mode }) {
     settingParts.push(`对方MBTI:${session.mbti}（${MBTI_PROFILES[session.mbti] || ''}）`);
   }
   lines.push(`【设定】${settingParts.join('｜')}`);
-  if (content.summary) lines.push(`【旧摘要】${content.summary}`);
   const recent = trimRounds(content.rounds);
   if (recent.length) {
     lines.push('【近期对话】');

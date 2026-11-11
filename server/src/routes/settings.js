@@ -120,8 +120,7 @@ export async function generateReplies(settings, { session, content, purpose, mes
     ? parsed.replies.map((r) => String(r).trim()).filter(Boolean).slice(0, 3)
     : [];
   if (replies.length === 0) throw new Error('模型未返回有效话术');
-  const summary = typeof parsed.summary === 'string' ? parsed.summary.trim().slice(0, 400) : content.summary;
-  return { replies, summary };
+  return { replies };
 }
 
 export { readLLM };
