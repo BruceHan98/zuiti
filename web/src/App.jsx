@@ -24,6 +24,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
+  const [regenerating, setRegenerating] = useState(null); // 重新生成中的轮次索引
   const toastTimer = useRef(null);
 
   const notify = useCallback((text) => {
@@ -199,6 +200,35 @@ export default function App() {
     }
   }
 
+  /** 重新生成某一轮回复：原地替换该轮 3 条回复 */
+  async function handleRegenerate(roundIndex) {
+    if (!activeId || generating || regenerating != null) return;
+    setRegenerating(roundIndex);
+    setCopiedKey(null);
+    try {
+      const res = await api.regenerate(activeId, roundIndex);
+      setActiveDetail((prev) => {
+        const rounds = [...(prev?.content?.rounds || [])];
+        if (rounds[roundIndex]) {
+          rounds[roundIndex] = {
+            ...rounds[roundIndex],
+            replies: res.replies,
+            chosen: null,
+          };
+        }
+        return { ...prev, content: { ...prev.content, rounds } };
+      });
+      notify('已重新生成 3 条回复');
+      return true;
+    } catch (e) {
+      notify(e.message);
+      if (e.code === 'LLM_NOT_BOUND') setShowSettings(true);
+      return false;
+    } finally {
+      setRegenerating(null);
+    }
+  }
+
   function handleLogout() {
     setToken(null);
     setUser(null);
@@ -276,6 +306,8 @@ export default function App() {
           onGenerate={handleGenerate}
           onCopy={handleCopy}
           onDeleteRound={handleDeleteRound}
+          onRegenerate={handleRegenerate}
+          regenerating={regenerating}
           onNotify={notify}
           copiedKey={copiedKey}
         />

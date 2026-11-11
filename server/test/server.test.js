@@ -636,6 +636,63 @@ test('想法模式（compose）：提示词/轮次结构/上下文回填', async
   assert.ok(lastCall[0] !== undefined, 'reply 系统提示保持回复顾问');
 });
 
+test('重新生成：原地替换回复、上下文只含该轮之前历史、选用状态重置', async () => {
+  const token = await createUser('regenuser');
+  await api.req('PUT', '/api/settings/llm', {
+    token,
+    body: { provider: 'custom', baseUrl: llmBase, apiKey: 'sk-x', model: 'm' },
+  });
+  const s = await api.req('POST', '/api/sessions', {
+    token,
+    body: { role: 'friend', name: '重生成测试' },
+  });
+  const sid = s.json.session.id;
+
+  // 三轮生成
+  for (const msg of ['第一句', '第二句', '第三句']) {
+    await api.req('POST', `/api/sessions/${sid}/generate`, {
+      token,
+      body: { message: msg, purpose: '幽默调侃' },
+    });
+  }
+  const before = await api.req('GET', `/api/sessions/${sid}`, { token });
+  const oldReplies = before.json.content.rounds[1].replies;
+
+  // 重新生成第 2 轮（索引 1）
+  const regen = await api.req('POST', `/api/sessions/${sid}/regenerate`, {
+    token,
+    body: { roundIndex: 1 },
+  });
+  assert.equal(regen.status, 200);
+  assert.equal(regen.json.roundIndex, 1);
+
+  // 上下文：只含第 1 轮（被重生成轮本身及其后的轮次不应出现）
+  const lastPrompt = llmCalls[llmCalls.length - 1].body.messages.map((m) => m.content).join('\n');
+  assert.ok(lastPrompt.includes('对方:第一句'), '应携带该轮之前的历史');
+  assert.ok(!lastPrompt.includes('对方:第二句\n'), '被重生成的轮次原文不应作为上下文出现');
+  assert.ok(lastPrompt.includes('【最新消息】对方:第二句'), '被重生成轮消息应作为最新消息');
+
+  // 原地替换：轮次总数不变，第 2 轮回复更新、其他轮不受影响
+  const after = await api.req('GET', `/api/sessions/${sid}`, { token });
+  assert.equal(after.json.content.rounds.length, 3, '轮次总数不变');
+  const newReplies = after.json.content.rounds[1].replies;
+  assert.notDeepEqual(newReplies, oldReplies, '回复应被替换');
+  assert.deepEqual(after.json.content.rounds[0], before.json.content.rounds[0], '其他轮次不受影响');
+
+  // 选用后重新生成，chosen 应重置
+  await api.req('PUT', `/api/sessions/${sid}/choose`, { token, body: { roundIndex: 0, replyIndex: 1 } });
+  await api.req('POST', `/api/sessions/${sid}/regenerate`, { token, body: { roundIndex: 0 } });
+  const final = await api.req('GET', `/api/sessions/${sid}`, { token });
+  assert.equal(final.json.content.rounds[0].chosen, null, '重新生成后选用状态重置');
+
+  // 无效索引 / 越权
+  const bad = await api.req('POST', `/api/sessions/${sid}/regenerate`, { token, body: { roundIndex: 99 } });
+  assert.equal(bad.status, 400);
+  const t2 = await createUser('regenusurp');
+  const foreign = await api.req('POST', `/api/sessions/${sid}/regenerate`, { token: t2, body: { roundIndex: 0 } });
+  assert.equal(foreign.status, 404);
+});
+
 test('登录接口限流：爆破触发 429（接口，放在最后）', async () => {
   let got429 = false;
   for (let i = 0; i < 40; i++) {

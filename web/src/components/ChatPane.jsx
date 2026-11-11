@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MODES, REPLY_STYLES, ROLES } from '../constants.js';
-import { IconChat, IconCheck, IconCopy, IconEdit, IconSparkles, IconTrash } from './Icons.jsx';
+import { IconChat, IconCheck, IconCopy, IconEdit, IconRefresh, IconSparkles, IconTrash } from './Icons.jsx';
 
 function ReplyCard({ reply, index, chosen, copied, onCopy }) {
   const isChosen = chosen === index;
@@ -32,6 +32,8 @@ export default function ChatPane({
   onGenerate,
   onCopy,
   onDeleteRound,
+  onRegenerate,
+  regenerating,
   onNotify,
   copiedKey,
 }) {
@@ -126,10 +128,19 @@ export default function ChatPane({
                   })}
                 </span>
                 <span className="round-actions">
-                  <button className="round-btn" title="删除后回填到输入框，可修改后重新生成" onClick={() => editRound(ri)} disabled={generating}>
+                  <button
+                    className="round-btn"
+                    title="保留原消息，重新生成 3 条回复"
+                    onClick={() => onRegenerate?.(ri)}
+                    disabled={generating || regenerating != null}
+                  >
+                    {regenerating === ri ? <span className="spinner" /> : <IconRefresh size={13} />}
+                    {regenerating === ri ? '生成中…' : '重新生成'}
+                  </button>
+                  <button className="round-btn" title="删除后回填到输入框，可修改后重新生成" onClick={() => editRound(ri)} disabled={generating || regenerating != null}>
                     <IconEdit size={13} /> 重新编辑
                   </button>
-                  <button className="round-btn danger" title="删除这条记录" onClick={() => deleteRound(ri)} disabled={generating}>
+                  <button className="round-btn danger" title="删除这条记录" onClick={() => deleteRound(ri)} disabled={generating || regenerating != null}>
                     <IconTrash size={13} /> 删除
                   </button>
                 </span>
@@ -137,7 +148,7 @@ export default function ChatPane({
               <div className={`bubble-in ${round.mode === 'compose' ? 'bubble-compose' : ''}`}>
                 {round.text}
               </div>
-              <div className="replies-row">
+              <div className={`replies-row ${regenerating === ri ? 'regenerating' : ''}`}>
                 {round.replies.map((reply, i) => (
                   <ReplyCard
                     key={i}

@@ -647,6 +647,12 @@ input, textarea, select { font-family: inherit; }
   margin-top: 13px;
 }
 
+/* 重新生成中：卡片半透明过渡 */
+.replies-row.regenerating .reply-card {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+
 .reply-card {
   background: var(--surface);
   border: 1.5px solid var(--border);

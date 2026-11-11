@@ -155,6 +155,42 @@ sessionsRouter.delete('/:id/round/:roundIndex', (req, res) => {
   res.json({ ok: true, rounds: content.rounds.length });
 });
 
+/** 重新生成某一轮回复：保留原消息/目的/模式，用该轮之前的历史作上下文，原地替换 3 条回复 */
+sessionsRouter.post('/:id/regenerate', generateLimiter, async (req, res) => {
+  const s = getSessionForUser(req.params.id, req.user.id);
+  if (!s) return res.status(404).json({ error: '会话不存在' });
+  const idx = Number(req.body?.roundIndex);
+  const content = decodeContent(s);
+  const round = content.rounds[idx];
+  if (!round) return res.status(400).json({ error: '无效的轮次' });
+
+  const llm = readLLM(req.user.id);
+  if (!llm) return res.status(400).json({ error: '请先在设置中绑定大模型', code: 'LLM_NOT_BOUND' });
+
+  // 上下文只携带该轮之前的历史（不含被重生成本身）
+  const priorContent = { rounds: content.rounds.slice(0, idx) };
+  let result;
+  try {
+    result = await generateReplies(llm, {
+      session: s,
+      content: priorContent,
+      purpose: round.purpose || '',
+      message: round.text,
+      mode: round.mode || 'reply',
+    });
+  } catch (e) {
+    return res.status(502).json({ error: e.message, code: e.code || 'LLM_ERROR' });
+  }
+
+  content.rounds[idx] = { ...round, replies: result.replies, chosen: null };
+  db.prepare('UPDATE chat_sessions SET content_enc = ?, updated_at = ? WHERE id = ?').run(
+    encrypt(JSON.stringify(content)),
+    Date.now(),
+    s.id
+  );
+  res.json({ replies: result.replies, roundIndex: idx });
+});
+
 /** 生成 3 条推荐话术（reply=针对对方的话；compose=把用户想法写成消息） */
 sessionsRouter.post('/:id/generate', generateLimiter, async (req, res) => {
   const s = getSessionForUser(req.params.id, req.user.id);
